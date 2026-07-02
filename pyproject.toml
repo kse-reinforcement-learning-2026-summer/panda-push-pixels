@@ -7,18 +7,17 @@ name = "panda-lift-pixels"
 version = "1.0.0"
 description = "Frozen pixel-based Panda Lift environment and grader for KSE RL Project 2"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Yurii Hannich" }]
 
 # Core dependencies needed to BUILD the env and GRADE a model.pt (no Stable-Baselines3).
-# These pins encode the only stack that works: panda-gym requires numpy<2 and pybullet has no
-# wheels for Python 3.12+ (hence requires-python <3.13).
+# panda-gym requires numpy<2; pybullet has wheels for 3.11-3.12 (3.13+ builds from source).
+# scipy is transitive (via panda-gym/pybullet) — no need to pin directly.
 dependencies = [
     "numpy<2",
-    "scipy<1.14",
-    "gymnasium==1.2.3",
-    "pybullet>=3.2.5,<3.3",       # permissive: grab the platform wheel (cp311 manylinux / macos); patch versions behave identically
+    "gymnasium>=1.2,<2",
+    "pybullet>=3.2.5",
     "panda-gym==3.0.7",
     "torch>=2.3",                 # loose: GPU torch on Colab / CPU torch in the grader both satisfy
 ]

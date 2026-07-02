@@ -29,7 +29,7 @@ pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learni
 pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v1.0.0"
 ```
 
-Requires **Python 3.11 or 3.12** (panda-gym pins `numpy<2`; pybullet has no wheels for 3.13+).
+Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).
 On Colab (3.12) pybullet builds from source the first time (~3–6 min); install `numpy<2` first.
 
 ## Public API
