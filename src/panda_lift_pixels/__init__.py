@@ -19,7 +19,7 @@ from . import contract, grading
 from .env import PandaLiftPixels
 from .export import export_model, selfcheck
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # Register with gymnasium so students can use gym.make("PandaLiftPixels-v0")
 gym.register(
