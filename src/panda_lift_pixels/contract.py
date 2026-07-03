@@ -22,6 +22,7 @@ OBS_HIGH = 1.0                                # observations are float32 in [0, 
 # ---------------------------------------------------------------------------
 # Action contract — what the model must output
 # ---------------------------------------------------------------------------
+ACTION_REPEAT = 2                            # physics steps per agent decision (baked into PandaLiftPixels)
 ACTION_DIM = 8                               # 7 joint position deltas + 1 gripper (joints control)
 ACTION_LOW = -1.0
 ACTION_HIGH = 1.0                            # the grader clips outputs into [ACTION_LOW, ACTION_HIGH]

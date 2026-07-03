@@ -25,10 +25,10 @@ pixels** (4 stacked grayscale frames, DQN-style), controlled at the **joint** le
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.2.0"
+pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.3.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.2.0"
+pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.3.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).

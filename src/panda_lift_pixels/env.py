@@ -59,7 +59,7 @@ class PandaLiftPixels(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 20}
 
     def __init__(self, max_episode_steps=MAX_EPISODE_STEPS, lift_height=LIFT_HEIGHT,
-                 render_kwargs=None):
+                 action_repeat=2, render_kwargs=None):
         super().__init__()
         render_cfg = dict(_RENDER_DEFAULTS)
         if render_kwargs:
@@ -75,8 +75,9 @@ class PandaLiftPixels(gym.Env):
         self.action_space = spaces.Box(-1.0, 1.0, (ACTION_DIM,), dtype=np.float32)
 
         self._frames = collections.deque(maxlen=N_STACK)
-        self._t = 0
+        self._t = 0                          # counts agent *decisions*, not physics steps
         self._max_steps = int(max_episode_steps)
+        self._action_repeat = max(1, int(action_repeat))
         self._default_lift_height = float(lift_height)
         self._lift_height = self._default_lift_height
 
@@ -196,9 +197,13 @@ class PandaLiftPixels(gym.Env):
 
     def step(self, action):
         action = np.asarray(action, dtype=np.float32).reshape(ACTION_DIM)
-        self._env.step(action)
-        self._t += 1
-        self._frames.append(self._render_frame())
+        # Repeat action for _action_repeat physics steps; render only the final state.
+        # This skips intermediate renders (the render bottleneck) while covering more
+        # simulation time per agent decision.
+        for _ in range(self._action_repeat):
+            self._env.step(action)
+        self._frames.append(self._render_frame())  # one render per decision
+        self._t += 1                               # count decisions
 
         obs = self._stacked_obs()
         p = self._privileged()

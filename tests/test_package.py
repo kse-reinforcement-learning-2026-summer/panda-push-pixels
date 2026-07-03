@@ -30,6 +30,7 @@ def test_env_observation_contract():
 
 
 def test_episode_horizon_and_reward():
+    """Horizon is MAX_EPISODE_STEPS agent *decisions* (not physics steps)."""
     env = make_eval_env()
     env.reset(seed=0)
     rewards, done, steps = [], False, 0
@@ -38,8 +39,19 @@ def test_episode_horizon_and_reward():
         rewards.append(r)
         steps += 1
         done = term or trunc
-    assert steps == contract.MAX_EPISODE_STEPS
+    assert steps == contract.MAX_EPISODE_STEPS   # 50 decisions regardless of action_repeat
     assert set(np.unique(rewards)).issubset({-1.0, 0.0})
+    env.close()
+
+
+def test_action_repeat_default():
+    """Default action_repeat=2: each env.step() covers 2 physics steps (1 render)."""
+    from panda_lift_pixels import PandaLiftPixels
+    env = PandaLiftPixels()
+    assert env._action_repeat == contract.ACTION_REPEAT == 2
+    obs1, _ = env.reset(seed=0)
+    obs2, _, _, _, _ = env.step(env.action_space.sample())
+    assert obs1.shape == obs2.shape == contract.OBS_SHAPE
     env.close()
 
 
