@@ -101,7 +101,7 @@ def measure_latency(model_path, n=50):
 def evaluate_policy(policy, n_episodes=EVAL_EPISODES_CI, env=None, verbose=False):
     """Run ``n_episodes`` deterministic episodes with an already-loaded ``policy`` and report metrics.
 
-    ``policy`` is any callable mapping ``obs (1, 4, 96, 96)`` float32 -> ``action (1, 8)`` — e.g. a
+    ``policy`` is any callable mapping ``obs (1, 4, 96, 96)`` float32 -> ``action (1, 4)`` — e.g. a
     module returned by ``torch.jit.load`` (grading) or ``panda_lift_pixels.extract_actor`` (pre-export
     sanity check). This function never imports Stable-Baselines3.
 

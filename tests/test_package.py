@@ -150,7 +150,7 @@ def test_latency_under_budget(tiny_model):
 
 def test_frozen_module_rejected():
     """A jit.freeze'd model hides its parameters — the grader must reject it, not pass it."""
-    net = torch.nn.Sequential(torch.nn.Flatten(), torch.nn.Linear(4 * 96 * 96, 8), torch.nn.Tanh())
+    net = torch.nn.Sequential(torch.nn.Flatten(), torch.nn.Linear(4 * 96 * 96, contract.ACTION_DIM), torch.nn.Tanh())
     traced = torch.jit.freeze(torch.jit.trace(net.eval(), torch.zeros(1, *contract.OBS_SHAPE)))
     torch.jit.save(traced, MODEL_PATH + ".frozen")
     with pytest.raises(AssertionError):

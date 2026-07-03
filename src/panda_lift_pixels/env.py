@@ -1,7 +1,7 @@
 """The frozen canonical environment for Project 2: ``PandaLiftPixels``.
 
 Task: grasp the cube and lift it above the table, then keep it from falling — from pixels,
-with joints control.
+with end-effector (Cartesian) control.
 
 DO NOT MODIFY THIS FILE. The grader installs this package from a pinned git tag and uses its
 own copy regardless of what is in the student's repository. Shape your training by:
@@ -50,10 +50,10 @@ _RENDER_DEFAULTS = dict(
 
 
 class PandaLiftPixels(gym.Env):
-    """Pixel-observation Lift task with joints control (frozen contract).
+    """Pixel-observation Lift task with end-effector control (frozen contract).
 
     Observation: ``Box(0, 1, (4, 96, 96), float32)`` — 4 stacked grayscale frames, channels-first.
-    Action:      ``Box(-1, 1, (8,), float32)`` — 7 joint position deltas + gripper.
+    Action:      ``Box(-1, 1, (4,), float32)`` — 3 end-effector position deltas + gripper.
     """
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 20}
