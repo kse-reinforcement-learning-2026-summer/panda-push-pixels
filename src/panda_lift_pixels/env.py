@@ -38,13 +38,13 @@ from .contract import (
 _LEFT_FINGER_LINK = 9
 _RIGHT_FINGER_LINK = 10
 
-# Camera placed close to the small (4 cm) cube so it is more than a few pixels at 96x96.
+# Camera: side view at medium distance — shows robot, table, and cube clearly.
 _RENDER_DEFAULTS = dict(
     render_width=96,
     render_height=96,
-    render_distance=0.8,
-    render_target_position=[0.0, 0.0, 0.1],
-    render_yaw=45,
+    render_distance=1.2,
+    render_target_position=[-0.2, 0.0, 0.07],
+    render_yaw=90,
     render_pitch=-30,
 )
 
