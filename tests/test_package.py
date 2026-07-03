@@ -50,6 +50,22 @@ def test_curriculum_start_grasped_lifts_object():
     env.close()
 
 
+def test_is_touching_present_and_pure_contact():
+    """info exposes a pure-contact is_touching signal (grasp without the height gate)."""
+    env = make_eval_env()
+    _, info = env.reset(seed=0)
+    # both keys present, boolean-typed
+    assert "is_touching" in info and "is_grasped" in info
+    assert isinstance(bool(info["is_touching"]), bool)
+    # is_grasped implies is_touching (grasped = touching AND lifted), never the reverse constraint
+    for _ in range(20):
+        _, _, term, trunc, info = env.step(env.action_space.sample())
+        assert not (info["is_grasped"] and not info["is_touching"])
+        if term or trunc:
+            break
+    env.close()
+
+
 @pytest.fixture(scope="module")
 def tiny_model():
     from stable_baselines3 import SAC

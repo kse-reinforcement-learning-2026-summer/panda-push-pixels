@@ -5,8 +5,8 @@ with joints control.
 
 DO NOT MODIFY THIS FILE. The grader installs this package from a pinned git tag and uses its
 own copy regardless of what is in the student's repository. Shape your training by:
-  * reading the privileged ``info`` dict (object/gripper positions, is_grasped, ...) in a thin
-    ``gymnasium.Wrapper`` to compute any reward you like, and/or
+  * reading the privileged ``info`` dict (object/gripper positions, is_touching, is_grasped, ...)
+    in a thin ``gymnasium.Wrapper`` to compute any reward you like, and/or
   * passing curriculum ``options`` to ``reset()`` (object placement, lift bar, start-grasped).
 Never touch the observation/action machinery below, or your model will receive a different
 input distribution at grading time and fail to transfer.
@@ -96,20 +96,28 @@ class PandaLiftPixels(gym.Env):
     # ------------------------------------------------------------------ #
     # Privileged state — for reward shaping by students; NOT the observation
     # ------------------------------------------------------------------ #
-    def _is_grasped(self, object_height):
+    def _contacts(self, object_height):
+        """Return (is_touching, is_grasped).
+
+        is_touching: BOTH fingers are in contact with the cube (pure contact, no height gate) —
+                     an early, informative shaping signal available before the cube is lifted.
+        is_grasped:  is_touching AND the cube is already off the table (object_height > 0.045) —
+                     this is the stricter signal used by the success criterion.
+        """
         left = self._pc.getContactPoints(
             bodyA=self._panda_id, bodyB=self._object_id, linkIndexA=_LEFT_FINGER_LINK
         )
         right = self._pc.getContactPoints(
             bodyA=self._panda_id, bodyB=self._object_id, linkIndexA=_RIGHT_FINGER_LINK
         )
-        return bool(left) and bool(right) and object_height > GRASP_LIFT_OFF
+        touching = bool(left) and bool(right)
+        return touching, (touching and object_height > GRASP_LIFT_OFF)
 
     def _privileged(self):
         obj = np.asarray(self._sim.get_base_position("object"), dtype=np.float32)
         ee = np.asarray(self._panda.robot.get_ee_position(), dtype=np.float32)
         vel = np.asarray(self._sim.get_base_velocity("object"), dtype=np.float32)
-        grasped = self._is_grasped(float(obj[2]))
+        touching, grasped = self._contacts(float(obj[2]))
         return {
             "object_position": obj,
             "ee_position": ee,
@@ -117,6 +125,7 @@ class PandaLiftPixels(gym.Env):
             "object_height": float(obj[2]),
             "gripper_to_object": float(np.linalg.norm(ee - obj)),
             "fingers_width": float(self._panda.robot.get_fingers_width()),
+            "is_touching": touching,
             "is_grasped": grasped,
         }
 
