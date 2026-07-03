@@ -10,10 +10,12 @@ their GitHub Actions CI, and in the instructor's final grading run.
 ## The task
 
 Grasp the cube and lift it above the table, then keep it from falling — observed **only from
-pixels** (4 stacked RGB frames, DQN-style), controlled at the **joint** level.
+pixels** (4 stacked grayscale frames, DQN-style), controlled at the **joint** level.
 
-* **Observation** — `Box(0, 1, (12, 96, 96), float32)`: 4 stacked RGB frames, channels-first,
-  already normalized to `[0, 1]`. (Do **not** normalize again in your model.)
+* **Observation** — `Box(0, 1, (4, 96, 96), float32)`: 4 stacked **grayscale** frames (96×96),
+  channels-first, already normalized to `[0, 1]`. (Do **not** normalize again in your model.)
+  **Why grayscale:** Scene is mostly gray (robot, table, walls); only the cube is green.
+  Grayscale reduces observation 3× (faster training, fewer params) while preserving task info.
 * **Action** — `Box(-1, 1, (8,), float32)`: 7 joint position deltas + gripper.
 * **Canonical reward** — `0.0` while the cube is lifted-and-held, else `-1.0`, over a fixed
   50-step horizon. The graded metric is the **median cumulative reward**.
@@ -23,10 +25,10 @@ pixels** (4 stacked RGB frames, DQN-style), controlled at the **joint** level.
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v1.0.0"
+pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.0.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v1.0.0"
+pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v2.0.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).

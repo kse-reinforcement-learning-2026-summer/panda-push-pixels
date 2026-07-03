@@ -52,7 +52,7 @@ _RENDER_DEFAULTS = dict(
 class PandaLiftPixels(gym.Env):
     """Pixel-observation Lift task with joints control (frozen contract).
 
-    Observation: ``Box(0, 1, (12, 96, 96), float32)`` — 4 stacked RGB frames, channels-first.
+    Observation: ``Box(0, 1, (4, 96, 96), float32)`` — 4 stacked grayscale frames, channels-first.
     Action:      ``Box(-1, 1, (8,), float32)`` — 7 joint position deltas + gripper.
     """
 
@@ -84,11 +84,13 @@ class PandaLiftPixels(gym.Env):
     # FROZEN observation pipeline (identical in training and grading)
     # ------------------------------------------------------------------ #
     def _render_frame(self):
-        frame = self._env.render()                    # (96, 96, 3) uint8
-        return np.transpose(frame, (2, 0, 1))         # (3, 96, 96) uint8
+        frame = self._env.render()                    # (96, 96, 3) uint8 RGB
+        # Convert to grayscale using standard weights: 0.299*R + 0.587*G + 0.114*B
+        gray = (0.299 * frame[:, :, 0] + 0.587 * frame[:, :, 1] + 0.114 * frame[:, :, 2])
+        return gray.astype(np.uint8)[np.newaxis, :, :]  # (1, 96, 96) uint8
 
     def _stacked_obs(self):
-        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 96, 96) uint8
+        stacked = np.concatenate(list(self._frames), axis=0)   # (4, 96, 96) uint8
         return (stacked.astype(np.float32) / 255.0)
 
     # ------------------------------------------------------------------ #

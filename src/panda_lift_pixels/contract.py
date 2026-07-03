@@ -14,8 +14,8 @@ GitHub Secret). Everything else here is public on purpose.
 # ---------------------------------------------------------------------------
 N_STACK = 4                                   # DQN-style frame stack
 FRAME_HW = 96                                 # rendered frame is FRAME_HW x FRAME_HW
-CHANNELS_PER_FRAME = 3                        # RGB
-OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (12, 96, 96), channels-first
+CHANNELS_PER_FRAME = 1                        # Grayscale (scene is mostly gray, only cube is green)
+OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (4, 96, 96), channels-first
 OBS_LOW = 0.0
 OBS_HIGH = 1.0                                # observations are float32 in [0, 1] (already /255)
 
