@@ -12,7 +12,7 @@ their GitHub Actions CI, and in the instructor's final grading run.
 Grasp the cube and lift it above the table, then keep it from falling — observed **only from
 pixels** (4 stacked RGB frames, DQN-style), controlled at the **joint** level.
 
-* **Observation** — `Box(0, 1, (12, 84, 84), float32)`: 4 stacked RGB frames, channels-first,
+* **Observation** — `Box(0, 1, (12, 96, 96), float32)`: 4 stacked RGB frames, channels-first,
   already normalized to `[0, 1]`. (Do **not** normalize again in your model.)
 * **Action** — `Box(-1, 1, (8,), float32)`: 7 joint position deltas + gripper.
 * **Canonical reward** — `0.0` while the cube is lifted-and-held, else `-1.0`, over a fixed

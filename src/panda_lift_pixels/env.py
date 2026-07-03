@@ -38,10 +38,10 @@ from .contract import (
 _LEFT_FINGER_LINK = 9
 _RIGHT_FINGER_LINK = 10
 
-# Camera placed close to the small (4 cm) cube so it is more than a few pixels at 84x84.
+# Camera placed close to the small (4 cm) cube so it is more than a few pixels at 96x96.
 _RENDER_DEFAULTS = dict(
-    render_width=84,
-    render_height=84,
+    render_width=96,
+    render_height=96,
     render_distance=0.8,
     render_target_position=[0.0, 0.0, 0.1],
     render_yaw=45,
@@ -52,7 +52,7 @@ _RENDER_DEFAULTS = dict(
 class PandaLiftPixels(gym.Env):
     """Pixel-observation Lift task with joints control (frozen contract).
 
-    Observation: ``Box(0, 1, (12, 84, 84), float32)`` — 4 stacked RGB frames, channels-first.
+    Observation: ``Box(0, 1, (12, 96, 96), float32)`` — 4 stacked RGB frames, channels-first.
     Action:      ``Box(-1, 1, (8,), float32)`` — 7 joint position deltas + gripper.
     """
 
@@ -84,11 +84,11 @@ class PandaLiftPixels(gym.Env):
     # FROZEN observation pipeline (identical in training and grading)
     # ------------------------------------------------------------------ #
     def _render_frame(self):
-        frame = self._env.render()                    # (84, 84, 3) uint8
-        return np.transpose(frame, (2, 0, 1))         # (3, 84, 84) uint8
+        frame = self._env.render()                    # (96, 96, 3) uint8
+        return np.transpose(frame, (2, 0, 1))         # (3, 96, 96) uint8
 
     def _stacked_obs(self):
-        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 84, 84) uint8
+        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 96, 96) uint8
         return (stacked.astype(np.float32) / 255.0)
 
     # ------------------------------------------------------------------ #

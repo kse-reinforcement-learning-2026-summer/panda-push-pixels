@@ -1,6 +1,6 @@
 """Export a trained Stable-Baselines3 model to a standalone TorchScript ``model.pt``.
 
-The exported module maps an observation ``float32 (B, 12, 84, 84)`` in ``[0, 1]`` to an action
+The exported module maps an observation ``float32 (B, 12, 96, 96)`` in ``[0, 1]`` to an action
 ``(B, 8)`` in ``[-1, 1]``, and loads with ``torch.jit.load`` alone — no SB3 needed at grading.
 
 Supported algorithms:

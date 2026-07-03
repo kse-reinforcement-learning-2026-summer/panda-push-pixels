@@ -47,7 +47,7 @@ def _seed_offset():
 
 @torch.no_grad()
 def _act(policy, obs):
-    tensor = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)   # (1, 12, 84, 84)
+    tensor = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)   # (1, 12, 96, 96)
     action = policy(tensor).cpu().numpy().reshape(-1)
     return np.clip(action, ACTION_LOW, ACTION_HIGH)
 
