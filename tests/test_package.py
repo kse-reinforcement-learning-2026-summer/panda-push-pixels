@@ -69,10 +69,17 @@ def test_is_touching_present_and_pure_contact():
     # both keys present, boolean-typed
     assert "is_touching" in info and "is_grasped" in info
     assert isinstance(bool(info["is_touching"]), bool)
-    # is_grasped implies is_touching (grasped = touching AND lifted), never the reverse constraint
+    # per-finger contact ladder exposed for grasp shaping
+    assert {"left_finger_touch", "right_finger_touch", "n_fingers_touching"} <= set(info)
     for _ in range(20):
         _, _, term, trunc, info = env.step(env.action_space.sample())
+        # is_grasped implies is_touching (grasped = touching AND lifted), never the reverse constraint
         assert not (info["is_grasped"] and not info["is_touching"])
+        # n_fingers_touching in {0,1,2} and consistent with the per-finger / both-finger signals
+        n = info["n_fingers_touching"]
+        assert n == int(info["left_finger_touch"]) + int(info["right_finger_touch"])
+        assert n in (0, 1, 2)
+        assert info["is_touching"] == (n == 2)
         if term or trunc:
             break
     env.close()

@@ -98,27 +98,29 @@ class PandaLiftPixels(gym.Env):
     # Privileged state — for reward shaping by students; NOT the observation
     # ------------------------------------------------------------------ #
     def _contacts(self, object_height):
-        """Return (is_touching, is_grasped).
+        """Return (left_touch, right_touch, is_touching, is_grasped).
 
+        left_touch / right_touch: whether that single finger is in contact with the cube —
+                     a fine-grained shaping signal (1 finger < 2 fingers gives partial credit).
         is_touching: BOTH fingers are in contact with the cube (pure contact, no height gate) —
                      an early, informative shaping signal available before the cube is lifted.
         is_grasped:  is_touching AND the cube is already off the table (object_height > 0.045) —
                      this is the stricter signal used by the success criterion.
         """
-        left = self._pc.getContactPoints(
+        left = bool(self._pc.getContactPoints(
             bodyA=self._panda_id, bodyB=self._object_id, linkIndexA=_LEFT_FINGER_LINK
-        )
-        right = self._pc.getContactPoints(
+        ))
+        right = bool(self._pc.getContactPoints(
             bodyA=self._panda_id, bodyB=self._object_id, linkIndexA=_RIGHT_FINGER_LINK
-        )
-        touching = bool(left) and bool(right)
-        return touching, (touching and object_height > GRASP_LIFT_OFF)
+        ))
+        touching = left and right
+        return left, right, touching, (touching and object_height > GRASP_LIFT_OFF)
 
     def _privileged(self):
         obj = np.asarray(self._sim.get_base_position("object"), dtype=np.float32)
         ee = np.asarray(self._panda.robot.get_ee_position(), dtype=np.float32)
         vel = np.asarray(self._sim.get_base_velocity("object"), dtype=np.float32)
-        touching, grasped = self._contacts(float(obj[2]))
+        left_touch, right_touch, touching, grasped = self._contacts(float(obj[2]))
         return {
             "object_position": obj,
             "ee_position": ee,
@@ -126,6 +128,9 @@ class PandaLiftPixels(gym.Env):
             "object_height": float(obj[2]),
             "gripper_to_object": float(np.linalg.norm(ee - obj)),
             "fingers_width": float(self._panda.robot.get_fingers_width()),
+            "left_finger_touch": left_touch,
+            "right_finger_touch": right_touch,
+            "n_fingers_touching": int(left_touch) + int(right_touch),
             "is_touching": touching,
             "is_grasped": grasped,
         }
