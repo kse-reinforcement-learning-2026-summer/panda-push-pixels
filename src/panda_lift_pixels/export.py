@@ -1,7 +1,7 @@
 """Export a trained Stable-Baselines3 model to a standalone TorchScript ``model.pt``.
 
-The exported module maps an observation ``float32 (B, 4, 96, 96)`` in ``[0, 1]`` to an action
-``(B, 4)`` in ``[-1, 1]``, and loads with ``torch.jit.load`` alone — no SB3 needed at grading.
+The exported module maps an observation ``float32 (B, 12, 112, 112)`` in ``[0, 1]`` to an action
+``(B, 8)`` in ``[-1, 1]``, and loads with ``torch.jit.load`` alone — no SB3 needed at grading.
 
 Supported algorithms (the ones allowed in Project 2):
   * on-policy  — PPO, A2C        (actor lives inside ``ActorCriticPolicy``),
@@ -75,7 +75,7 @@ def extract_actor(sb3_model):
     """Return a standalone actor ``nn.Module`` extracted from an SB3 model.
 
     Works for A2C, PPO (on-policy) and DDPG, TD3, SAC (off-policy). The returned module maps
-    ``obs (B, 4, 96, 96)`` in ``[0, 1]`` to ``action (B, 4)`` in ``[-1, 1]`` and contains the
+    ``obs (B, 12, 112, 112)`` in ``[0, 1]`` to ``action (B, 8)`` in ``[-1, 1]`` and contains the
     actor only (no critic). The algorithm is auto-detected from the model's class name.
     """
     algo = type(sb3_model).__name__.upper()

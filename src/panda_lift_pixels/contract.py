@@ -13,9 +13,9 @@ GitHub Secret). Everything else here is public on purpose.
 # Observation contract — what the model receives as input
 # ---------------------------------------------------------------------------
 N_STACK = 4                                   # DQN-style frame stack
-FRAME_HW = 96                                 # rendered frame is FRAME_HW x FRAME_HW
+FRAME_HW = 112                                # rendered frame is FRAME_HW x FRAME_HW
 CHANNELS_PER_FRAME = 3                        # RGB (the cube is green — pops in colour, muddy in grayscale)
-OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (12, 96, 96), channels-first
+OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (12, 112, 112), channels-first
 OBS_LOW = 0.0
 OBS_HIGH = 1.0                                # observations are float32 in [0, 1] (already /255)
 

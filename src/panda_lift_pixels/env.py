@@ -41,19 +41,19 @@ _RIGHT_FINGER_LINK = 10
 # Camera: 3/4 view framed on the workspace — shows the whole arm (all joints/links, needed for
 # joints control), the gripper, table, and cube; background/floor trimmed out.
 _RENDER_DEFAULTS = dict(
-    render_width=96,
-    render_height=96,
-    render_distance=1.0,
+    render_width=112,
+    render_height=112,
+    render_distance=0.85,
     render_target_position=[-0.15, 0.0, 0.15],
     render_yaw=50,
-    render_pitch=-20,
+    render_pitch=-25,
 )
 
 
 class PandaLiftPixels(gym.Env):
     """Pixel-observation Lift task with joints control (frozen contract).
 
-    Observation: ``Box(0, 1, (12, 96, 96), float32)`` — 4 stacked RGB frames, channels-first.
+    Observation: ``Box(0, 1, (12, 112, 112), float32)`` — 4 stacked RGB frames, channels-first.
     Action:      ``Box(-1, 1, (8,), float32)`` — 7 joint position deltas + gripper.
     """
 
@@ -86,12 +86,12 @@ class PandaLiftPixels(gym.Env):
     # FROZEN observation pipeline (identical in training and grading)
     # ------------------------------------------------------------------ #
     def _render_frame(self):
-        frame = self._env.render()                    # (96, 96, 3) uint8 RGB
+        frame = self._env.render()                    # (112, 112, 3) uint8 RGB
         # Keep RGB, channels-first: the cube is green and pops in colour (muddy in grayscale).
-        return np.transpose(frame, (2, 0, 1)).astype(np.uint8)  # (3, 96, 96) uint8
+        return np.transpose(frame, (2, 0, 1)).astype(np.uint8)  # (3, 112, 112) uint8
 
     def _stacked_obs(self):
-        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 96, 96) uint8
+        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 112, 112) uint8
         return (stacked.astype(np.float32) / 255.0)
 
     # ------------------------------------------------------------------ #
