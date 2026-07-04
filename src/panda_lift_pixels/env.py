@@ -1,7 +1,7 @@
 """The frozen canonical environment for Project 2: ``PandaLiftPixels``.
 
 Task: grasp the cube and lift it above the table, then keep it from falling — from pixels,
-with end-effector (Cartesian) control.
+with joints control.
 
 DO NOT MODIFY THIS FILE. The grader installs this package from a pinned git tag and uses its
 own copy regardless of what is in the student's repository. Shape your training by:
@@ -38,22 +38,23 @@ from .contract import (
 _LEFT_FINGER_LINK = 9
 _RIGHT_FINGER_LINK = 10
 
-# Camera: side view at medium distance — shows robot, table, and cube clearly.
+# Camera: 3/4 view framed on the workspace — shows the whole arm (all joints/links, needed for
+# joints control), the gripper, table, and cube; background/floor trimmed out.
 _RENDER_DEFAULTS = dict(
     render_width=96,
     render_height=96,
-    render_distance=1.2,
-    render_target_position=[-0.2, 0.0, 0.07],
-    render_yaw=90,
-    render_pitch=-30,
+    render_distance=1.0,
+    render_target_position=[-0.15, 0.0, 0.15],
+    render_yaw=50,
+    render_pitch=-20,
 )
 
 
 class PandaLiftPixels(gym.Env):
-    """Pixel-observation Lift task with end-effector control (frozen contract).
+    """Pixel-observation Lift task with joints control (frozen contract).
 
-    Observation: ``Box(0, 1, (4, 96, 96), float32)`` — 4 stacked grayscale frames, channels-first.
-    Action:      ``Box(-1, 1, (4,), float32)`` — 3 end-effector position deltas + gripper.
+    Observation: ``Box(0, 1, (12, 96, 96), float32)`` — 4 stacked RGB frames, channels-first.
+    Action:      ``Box(-1, 1, (8,), float32)`` — 7 joint position deltas + gripper.
     """
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 20}
@@ -86,12 +87,11 @@ class PandaLiftPixels(gym.Env):
     # ------------------------------------------------------------------ #
     def _render_frame(self):
         frame = self._env.render()                    # (96, 96, 3) uint8 RGB
-        # Convert to grayscale using standard weights: 0.299*R + 0.587*G + 0.114*B
-        gray = (0.299 * frame[:, :, 0] + 0.587 * frame[:, :, 1] + 0.114 * frame[:, :, 2])
-        return gray.astype(np.uint8)[np.newaxis, :, :]  # (1, 96, 96) uint8
+        # Keep RGB, channels-first: the cube is green and pops in colour (muddy in grayscale).
+        return np.transpose(frame, (2, 0, 1)).astype(np.uint8)  # (3, 96, 96) uint8
 
     def _stacked_obs(self):
-        stacked = np.concatenate(list(self._frames), axis=0)   # (4, 96, 96) uint8
+        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 96, 96) uint8
         return (stacked.astype(np.float32) / 255.0)
 
     # ------------------------------------------------------------------ #

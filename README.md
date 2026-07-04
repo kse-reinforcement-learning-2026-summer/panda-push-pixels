@@ -10,14 +10,14 @@ their GitHub Actions CI, and in the instructor's final grading run.
 ## The task
 
 Grasp the cube and lift it above the table, then keep it from falling — observed **only from
-pixels** (4 stacked grayscale frames, DQN-style), controlled at the **end-effector** level
-(Cartesian position deltas).
+pixels** (4 stacked RGB frames, DQN-style), controlled at the **joint** level (7 joint position
+deltas + gripper; the policy solves its own IK).
 
-* **Observation** — `Box(0, 1, (4, 96, 96), float32)`: 4 stacked **grayscale** frames (96×96),
+* **Observation** — `Box(0, 1, (12, 96, 96), float32)`: 4 stacked **RGB** frames (96×96),
   channels-first, already normalized to `[0, 1]`. (Do **not** normalize again in your model.)
-  **Why grayscale:** Scene is mostly gray (robot, table, walls); only the cube is green.
-  Grayscale reduces observation 3× (faster training, fewer params) while preserving task info.
-* **Action** — `Box(-1, 1, (4,), float32)`: 3 end-effector position deltas + gripper.
+  **Why RGB:** the scene is mostly gray (robot, table, walls) and only the cube is green — in
+  grayscale the cube nearly vanishes; colour keeps it clearly visible for perception.
+* **Action** — `Box(-1, 1, (8,), float32)`: 7 joint position deltas + gripper.
 * **Canonical reward** — `0.0` while the cube is lifted-and-held, else `-1.0`, over a fixed
   50-step horizon. The graded metric is the **median cumulative reward**.
 
@@ -26,10 +26,10 @@ pixels** (4 stacked grayscale frames, DQN-style), controlled at the **end-effect
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v3.0.0"
+pip install "panda-lift-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v5.0.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v3.0.0"
+pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v5.0.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).
@@ -51,13 +51,13 @@ conda activate rl-project2
 conda install -c conda-forge "pybullet=3.25" "numpy<2" -y
 
 # 3. Install the project (training stack: Stable-Baselines3, etc.)
-pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v3.0.0"
+pip install "panda-lift-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-lift-pixels.git@v5.0.0"
 
 # 4. Verify
 python -c "import gymnasium as gym, panda_lift_pixels; \
 env = gym.make('PandaLiftPixels-v0'); obs, info = env.reset(seed=0); \
 print('OK', obs.shape, obs.dtype); env.close()"
-# Expected: OK (4, 96, 96) float32
+# Expected: OK (12, 96, 96) float32
 ```
 
 Notes:

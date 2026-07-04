@@ -14,8 +14,8 @@ GitHub Secret). Everything else here is public on purpose.
 # ---------------------------------------------------------------------------
 N_STACK = 4                                   # DQN-style frame stack
 FRAME_HW = 96                                 # rendered frame is FRAME_HW x FRAME_HW
-CHANNELS_PER_FRAME = 1                        # Grayscale (scene is mostly gray, only cube is green)
-OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (4, 96, 96), channels-first
+CHANNELS_PER_FRAME = 3                        # RGB (the cube is green — pops in colour, muddy in grayscale)
+OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (12, 96, 96), channels-first
 OBS_LOW = 0.0
 OBS_HIGH = 1.0                                # observations are float32 in [0, 1] (already /255)
 
@@ -23,14 +23,14 @@ OBS_HIGH = 1.0                                # observations are float32 in [0, 
 # Action contract — what the model must output
 # ---------------------------------------------------------------------------
 ACTION_REPEAT = 2                            # physics steps per agent decision (baked into PandaLiftPixels)
-ACTION_DIM = 4                               # 3 end-effector position deltas + 1 gripper (ee control)
+ACTION_DIM = 8                               # 7 joint position deltas + 1 gripper (joints control)
 ACTION_LOW = -1.0
 ACTION_HIGH = 1.0                            # the grader clips outputs into [ACTION_LOW, ACTION_HIGH]
 
 # ---------------------------------------------------------------------------
 # Task definition — the behavior we grade (Lift: grasp the cube and hold it up)
 # ---------------------------------------------------------------------------
-BASE_ENV_ID = "PandaPickAndPlace-v3"
+BASE_ENV_ID = "PandaPickAndPlaceJoints-v3"
 LIFT_HEIGHT = 0.10           # object-center height (m) above which the cube counts as "lifted"
 GRASP_LIFT_OFF = 0.045       # object clearly off the table (resting center ≈ 0.02 m)
 MAX_EPISODE_STEPS = 50       # grading horizon; canonical sparse reward integrates over this
