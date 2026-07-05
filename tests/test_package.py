@@ -77,12 +77,22 @@ def test_curriculum_start_lifted_in_air():
 
 
 def test_curriculum_ee_start_reach():
-    """ee_start (no grasp): OPEN gripper placed at a target; cube stays on the table."""
+    """ee_start (no grasp): gripper placed at a target with a chosen width; cube stays on the table."""
     env = make_eval_env()
-    _, info = env.reset(seed=4, options={"ee_start": [0.10, -0.08, 0.18]})
-    assert info["fingers_width"] > 0.06                         # gripper open (max ~0.08)
+    _, info = env.reset(seed=4, options={"ee_start": [0.10, -0.08, 0.18], "gripper_width": 0.05})
+    assert abs(info["fingers_width"] - 0.05) < 0.01             # width honoured (randomisable via range)
     assert info["object_height"] < contract.GRASP_LIFT_OFF      # cube on the table, not grasped
     assert np.linalg.norm(info["ee_position"] - np.array([0.10, -0.08, 0.18])) < 0.06  # IK ~near target
+    env.close()
+
+
+def test_curriculum_start_reached():
+    """start_reached: OPEN gripper (>= cube width) at the cube on the table; agent only has to close."""
+    env = make_eval_env()
+    _, info = env.reset(seed=6, options={"start_reached": True})
+    assert info["object_height"] < contract.GRASP_LIFT_OFF      # cube on the table, not lifted
+    assert info["gripper_to_object"] < 0.03                     # gripper is AT the cube
+    assert info["fingers_width"] >= 0.039                       # open at least ~cube width (not grasping)
     env.close()
 
 

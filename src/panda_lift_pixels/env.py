@@ -42,6 +42,8 @@ _GRASP_FINGER_HALF = 0.019
 _OPEN_FINGER_HALF = 0.04
 # Default ee-start box (m) for reach augmentation / in-air grasp: over the cube-spawn square, in the air.
 _DEFAULT_EE_BOX = {"x": (-0.13, 0.13), "y": (-0.13, 0.13), "z": (0.08, 0.22)}
+_CUBE_SIZE = 0.04            # cube side (m); an OPEN gripper must stay >= this so it can't push the cube
+_MAX_OPEN = 0.08             # maximum fingers_width
 
 # Camera: frontal view framed on the workspace — the gripper sits centred above the cube, so the
 # gripper<->cube alignment is read head-on (clearer for grasping); table fills the frame, floor trimmed.
@@ -189,11 +191,21 @@ class PandaLiftPixels(gym.Env):
             height = self._sample_scalar(options.get("grasp_height", 0.02))
             ee = self._ik_set_arm(float(obj[0]), float(obj[1]), height, _GRASP_FINGER_HALF)
             self._sim.set_base_pose("object", ee, np.array([0.0, 0.0, 0.0, 1.0]))
+        elif options.get("start_reached", False):
+            # Gripper positioned AT the cube but OPEN (>= cube width, never narrower -> can't push the
+            # cube): the approach is done, the agent only has to CLOSE. The cube sits on the table
+            # under the (open) gripper -- placed at the achieved ee xy so IK error can't leave a gap.
+            obj = self._sim.get_base_position("object")
+            height = self._sample_scalar(options.get("grasp_height", 0.02))
+            half = self._sample_finger_half(options.get("gripper_width", (_CUBE_SIZE, _MAX_OPEN)))
+            ee = self._ik_set_arm(float(obj[0]), float(obj[1]), height, half)
+            self._set_object_xy(float(ee[0]), float(ee[1]))
         elif "ee_start" in options:
-            # Non-grasped: place the OPEN gripper at a given/random ee position (reach-stage variety);
-            # the cube stays on the table.
+            # Non-grasped: place the gripper (open, width from gripper_width) at a given/random ee
+            # position (reach-stage variety); the cube stays on the table.
             x, y, z = self._sample_ee(options["ee_start"])
-            self._ik_set_arm(x, y, z, _OPEN_FINGER_HALF)
+            half = self._sample_finger_half(options.get("gripper_width", _MAX_OPEN))
+            self._ik_set_arm(x, y, z, half)
 
     def _set_object_xy(self, x, y):
         self._sim.set_base_pose(
@@ -205,6 +217,10 @@ class PandaLiftPixels(gym.Env):
         if isinstance(spec, (tuple, list)) and len(spec) == 2:
             return float(self.np_random.uniform(float(spec[0]), float(spec[1])))
         return float(spec)
+
+    def _sample_finger_half(self, width_spec):
+        """Total gripper width (float or ``(lo, hi)``) -> per-finger half-width."""
+        return self._sample_scalar(width_spec) / 2.0
 
     def _sample_ee(self, spec):
         """ee target: ``[x, y, z]`` fixed, or ``{"x":(lo,hi), "y":(lo,hi), "z":(lo,hi)}`` sampled."""
