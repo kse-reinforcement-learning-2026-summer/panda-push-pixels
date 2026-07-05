@@ -62,6 +62,18 @@ def test_curriculum_start_grasped_lifts_object():
     env.close()
 
 
+def test_curriculum_start_grasped_on_table():
+    """start_grasped + grasp_height places the cube gripped near the table (lift-motion bootstrap)."""
+    env = make_eval_env()
+    env.reset(seed=2, options={"start_grasped": True, "grasp_height": 0.02})
+    # one neutral step registers the contacts; the cube should be gripped low, not yet lifted
+    _, _, _, _, info = env.step(np.zeros(contract.ACTION_DIM, dtype=np.float32))
+    assert info["n_fingers_touching"] == 2
+    assert info["object_height"] < contract.GRASP_LIFT_OFF      # still on the table -> must be lifted
+    assert info["gripper_to_object"] < 0.03                     # cube is held in the gripper
+    env.close()
+
+
 def test_is_touching_present_and_pure_contact():
     """info exposes a pure-contact is_touching signal (grasp without the height gate)."""
     env = make_eval_env()

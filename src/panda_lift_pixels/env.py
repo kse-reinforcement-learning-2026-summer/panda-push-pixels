@@ -37,6 +37,8 @@ from .contract import (
 # Link indices of the two gripper fingers on the Panda body (verified against panda-gym 3.0.7).
 _LEFT_FINGER_LINK = 9
 _RIGHT_FINGER_LINK = 10
+# Per-finger half-width (m) to preset the gripper closed on the ~0.04 m cube for grasp bootstraps.
+_GRASP_FINGER_HALF = 0.019
 
 # Camera: frontal view framed on the workspace — the gripper sits centred above the cube, so the
 # gripper<->cube alignment is read head-on (clearer for grasping); table fills the frame, floor trimmed.
@@ -170,16 +172,38 @@ class PandaLiftPixels(gym.Env):
             self._set_object_xy(float(xy[0]), float(xy[1]))
 
         if options.get("start_grasped", False):
-            # Teleport the cube to the gripper so the agent only has to close + lift (bootstrap).
-            ee = np.asarray(self._panda.robot.get_ee_position(), dtype=np.float32)
-            self._sim.set_base_pose(
-                "object", ee.astype(np.float64), np.array([0.0, 0.0, 0.0, 1.0])
-            )
+            grasp_height = options.get("grasp_height", None)
+            if grasp_height is None:
+                # In-air grasp at the arm's rest pose (bootstrap "hold"): teleport cube to the ee.
+                ee = np.asarray(self._panda.robot.get_ee_position(), dtype=np.float32)
+                self._sim.set_base_pose(
+                    "object", ee.astype(np.float64), np.array([0.0, 0.0, 0.0, 1.0])
+                )
+            else:
+                # Grasp on/near the table at `grasp_height` (bootstrap the LIFT motion): move the arm
+                # down via IK onto the cube's spawn xy, close the fingers around it, place cube there.
+                self._grasp_object_at_height(float(grasp_height))
 
     def _set_object_xy(self, x, y):
         self._sim.set_base_pose(
             "object", np.array([x, y, 0.02]), np.array([0.0, 0.0, 0.0, 1.0])
         )
+
+    def _grasp_object_at_height(self, height):
+        """Reset into a grasp at (object_xy, height): move the arm down via IK so the gripper closes
+        around the cube at its spawn xy, then place the cube in the gripper. Lets a curriculum
+        bootstrap the LIFT motion (start holding on the table, agent must raise it). The arm is at
+        its neutral (gripper-down) pose here, so we reuse that orientation as the IK target."""
+        robot = self._panda.robot
+        obj = self._sim.get_base_position("object")
+        target = np.array([float(obj[0]), float(obj[1]), float(height)], dtype=np.float64)
+        down_orn = np.array(self._pc.getLinkState(self._panda_id, robot.ee_link)[1])
+        q = robot.inverse_kinematics(link=robot.ee_link, position=target, orientation=down_orn)
+        angles = np.asarray(q[: len(robot.joint_indices)], dtype=np.float64)
+        angles[-2:] = _GRASP_FINGER_HALF                    # close both fingers onto the cube
+        robot.set_joint_angles(angles)
+        ee = np.asarray(robot.get_ee_position(), dtype=np.float64)
+        self._sim.set_base_pose("object", ee, np.array([0.0, 0.0, 0.0, 1.0]))
 
     # ------------------------------------------------------------------ #
     # Gym API
