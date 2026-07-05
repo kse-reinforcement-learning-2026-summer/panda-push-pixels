@@ -50,6 +50,17 @@ def test_episode_horizon_and_reward():
     env.close()
 
 
+def test_never_spawns_already_solved():
+    """reset() must never hand out a configuration whose cube is already within the success zone --
+    otherwise a do-nothing policy scores a freebie success, corrupting shaping and the graded metric."""
+    env = make_eval_env()
+    for seed in range(60):
+        _, info = env.reset(seed=seed)
+        assert info["object_to_target"] >= contract.DISTANCE_THRESHOLD
+        assert info["is_success"] is False
+    env.close()
+
+
 def test_dwell_success_terminates_with_bonus():
     """The cube must stay within the target threshold for DWELL_STEPS consecutive steps -- a
     single-step graze from a fast-moving cube must NOT be enough (that was the old bug)."""

@@ -156,9 +156,22 @@ class PandaPushPixels(gym.Env):
     # ------------------------------------------------------------------ #
     # Gym API
     # ------------------------------------------------------------------ #
+    def _object_to_target(self):
+        obj = np.asarray(self._sim.get_base_position("object"), dtype=np.float32)
+        tgt = np.asarray(self._sim.get_base_position("target"), dtype=np.float32)
+        return float(np.linalg.norm(obj - tgt))
+
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)              # seeds self.np_random
         self._env.reset(seed=seed)
+        # Never hand out an already-solved configuration: if the cube spawns within the success
+        # zone, resample until it doesn't. Otherwise a do-nothing policy scores a freebie success
+        # (~7% of raw spawns), which both corrupts reward shaping and puts a luck floor under the
+        # graded success_rate. Training and grading share this env, so both are cleaned up.
+        tries = 0
+        while self._object_to_target() < DISTANCE_THRESHOLD and tries < 100:
+            self._env.reset()                 # seed=None -> advance the RNG -> a fresh spawn
+            tries += 1
         self._t = 0
         self._dwell = 0
 
