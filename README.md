@@ -19,10 +19,14 @@ closed and the policy solves its own IK).
   in the stock panda-gym scene the target is a translucent *green* box (same hue as the cube),
   so we repaint it red for this project.
 * **Action** — `Box(-1, 1, (7,), float32)`: 7 joint position deltas.
-* **Canonical reward** — sparse: `0.0` on a step where the cube is within `DISTANCE_THRESHOLD`
-  (5 cm) of the target, else `-1.0`. The episode **terminates the instant the cube reaches the
-  target**; otherwise it truncates at 50 steps. The graded metric is the **median cumulative
-  reward** (i.e. `-`steps-to-solve, or `-50` on a timeout).
+* **Canonical reward** — `STEP_PENALTY` (`-1.0`) every step, plus `SUCCESS_BONUS` (`+50.0`) added
+  on the step success is achieved. Success requires the cube to stay within `DISTANCE_THRESHOLD`
+  (5 cm) of the target for `DWELL_STEPS` (5) *consecutive* steps — a single-step graze from a
+  fast-moving cube doesn't count, so "fling the cube through the target zone" isn't a shortcut.
+  The one exception: if the cube is within the threshold right when the 50-step time limit hits,
+  that still counts (it would have dwelled long enough given a few more steps). The **graded
+  metric is `success_rate`** (fraction of eval episodes that reached the target); reward is a
+  training signal, not what the grader gates on.
 
 ### Why this is harder than it looks
 
@@ -130,8 +134,8 @@ src/panda_push_pixels/
 
 ## For the instructor
 
-* **Calibrate before release.** `REWARD_THRESHOLD` in `contract.py` is a placeholder. Train a
-  reference solution, then set the threshold to its median return minus a margin.
+* **Calibrate before release.** `SUCCESS_RATE_THRESHOLD` in `contract.py` is a placeholder. Train
+  a reference solution, then set the threshold to its measured success rate minus a margin.
 * **Hidden eval seeds.** `grading.evaluate` reads `EVAL_SEED_OFFSET` from the environment
   (default `0`). Set it as a GitHub Secret in the final grading workflow so students cannot
   overfit to the public seeds.

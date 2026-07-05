@@ -33,7 +33,7 @@ def test_env_observation_contract():
 
 
 def test_episode_horizon_and_reward():
-    """Horizon is MAX_EPISODE_STEPS unless the cube reaches the target sooner (early termination)."""
+    """Horizon is MAX_EPISODE_STEPS unless the dwell condition ends it sooner."""
     env = make_eval_env()
     env.reset(seed=0)
     rewards, done, steps = [], False, 0
@@ -44,23 +44,50 @@ def test_episode_horizon_and_reward():
         steps += 1
         done = term or trunc
     assert steps <= contract.MAX_EPISODE_STEPS
-    assert set(np.unique(rewards)).issubset({-1.0, 0.0})
+    assert set(np.unique(rewards)).issubset({contract.STEP_PENALTY, contract.STEP_PENALTY + contract.SUCCESS_BONUS})
     if steps < contract.MAX_EPISODE_STEPS:
-        assert info["is_success"]        # the only way to end before the horizon is success
+        assert info["is_success"]        # the only way to end before the horizon is dwell success
     env.close()
 
 
-def test_terminates_on_success():
-    """The episode ends the instant the cube reaches the target (vanilla PandaPush semantics)."""
+def test_dwell_success_terminates_with_bonus():
+    """The cube must stay within the target threshold for DWELL_STEPS consecutive steps -- a
+    single-step graze from a fast-moving cube must NOT be enough (that was the old bug)."""
     env = make_eval_env()
     env.reset(seed=0)
     tgt = env._sim.get_base_position("target")
     env._sim.set_base_pose("object", tgt, np.array([0.0, 0.0, 0.0, 1.0]))  # teleport cube onto target
-    _, reward, terminated, truncated, info = env.step(np.zeros(contract.ACTION_DIM, dtype=np.float32))
-    assert info["is_success"] is True
+    zero = np.zeros(contract.ACTION_DIM, dtype=np.float32)
+    for _ in range(contract.DWELL_STEPS - 1):
+        _, reward, terminated, truncated, info = env.step(zero)
+        assert terminated is False
+        assert info["is_success"] is False
+        assert reward == contract.STEP_PENALTY
+    _, reward, terminated, truncated, info = env.step(zero)   # the DWELL_STEPS-th consecutive close step
     assert terminated is True
     assert truncated is False
-    assert reward == 0.0
+    assert info["is_success"] is True
+    assert reward == contract.STEP_PENALTY + contract.SUCCESS_BONUS
+    env.close()
+
+
+def test_timeout_with_cube_at_target_still_counts_as_success():
+    """If the cube reaches the target only right at the time limit, that still counts -- it would
+    have dwelled long enough given a few more steps; the horizon shouldn't punish a near-miss."""
+    env = make_eval_env()
+    env.reset(seed=0)   # seed 0's object/target spawn ~0.11m apart -- not already close
+    zero = np.zeros(contract.ACTION_DIM, dtype=np.float32)
+    for _ in range(contract.MAX_EPISODE_STEPS - 1):
+        _, _, terminated, truncated, info = env.step(zero)
+        assert not terminated and not truncated
+        assert info["is_success"] is False
+    tgt = env._sim.get_base_position("target")
+    env._sim.set_base_pose("object", tgt, np.array([0.0, 0.0, 0.0, 1.0]))  # teleport onto target for the LAST step
+    _, reward, terminated, truncated, info = env.step(zero)
+    assert terminated is False
+    assert truncated is True
+    assert info["is_success"] is True
+    assert reward == contract.STEP_PENALTY + contract.SUCCESS_BONUS
     env.close()
 
 
@@ -78,7 +105,8 @@ def test_privileged_info_typed_and_consistent():
     )
     for _ in range(20):
         _, _, term, trunc, info = env.step(env.action_space.sample())
-        assert info["is_success"] == (info["object_to_target"] < contract.DISTANCE_THRESHOLD)
+        if info["is_success"]:           # success => currently close (the converse need not hold: it
+            assert info["object_to_target"] < contract.DISTANCE_THRESHOLD  # may take DWELL_STEPS to fire)
         if term or trunc:
             break
     env.close()
@@ -146,7 +174,9 @@ def test_contract_and_param_count(tiny_model):
 
 def test_grading_runs(tiny_model):
     m = grading.evaluate(MODEL_PATH, n_episodes=2)
-    assert -contract.MAX_EPISODE_STEPS <= m["median_reward"] <= 0.0
+    lower = contract.STEP_PENALTY * contract.MAX_EPISODE_STEPS               # total failure
+    upper = contract.STEP_PENALTY * contract.DWELL_STEPS + contract.SUCCESS_BONUS  # fastest possible success
+    assert lower <= m["median_reward"] <= upper
     assert 0.0 <= m["success_rate"] <= 1.0
 
 

@@ -28,10 +28,13 @@ from .contract import (
     ACTION_DIM,
     BASE_ENV_ID,
     DISTANCE_THRESHOLD,
+    DWELL_STEPS,
     MAX_EPISODE_STEPS,
     N_STACK,
     OBJECT_SIZE,
     OBS_SHAPE,
+    STEP_PENALTY,
+    SUCCESS_BONUS,
 )
 
 # Link indices of the two gripper fingers on the Panda body (verified against panda-gym 3.0.7).
@@ -84,6 +87,7 @@ class PandaPushPixels(gym.Env):
         self._frames = collections.deque(maxlen=N_STACK)
         self._t = 0                          # counts steps (one physics step per decision)
         self._max_steps = int(max_episode_steps)
+        self._dwell = 0                      # consecutive steps the cube has stayed near the target
 
     # ------------------------------------------------------------------ #
     # FROZEN observation pipeline (identical in training and grading)
@@ -127,11 +131,27 @@ class PandaPushPixels(gym.Env):
     # ------------------------------------------------------------------ #
     # Graded task — defines the behavior we want
     # ------------------------------------------------------------------ #
-    def _is_success(self, p):
-        return bool(p["object_to_target"] < DISTANCE_THRESHOLD)
+    def _step_outcome(self, p):
+        """Advance the dwell counter and compute (success, reward, terminated, truncated).
 
-    def _canonical_reward(self, p):
-        return 0.0 if self._is_success(p) else -1.0
+        Success requires the cube to stay within DISTANCE_THRESHOLD of the target for DWELL_STEPS
+        *consecutive* steps — a single-step graze from a fast-moving cube does not count (it would
+        otherwise be trivial to "win" by smashing the cube through the target zone without ever
+        placing it there). The one exception is the time limit itself: if the cube happens to be
+        within the threshold right when the episode times out, that still counts — it would have
+        dwelled long enough given a few more steps, and it would be unfair to punish a near-miss
+        that was only cut off by the horizon.
+        """
+        close = p["object_to_target"] < DISTANCE_THRESHOLD
+        self._dwell = self._dwell + 1 if close else 0
+        timed_out = self._t >= self._max_steps
+
+        dwell_success = self._dwell >= DWELL_STEPS
+        success = dwell_success or (timed_out and close)
+        reward = STEP_PENALTY + (SUCCESS_BONUS if success else 0.0)
+        terminated = dwell_success
+        truncated = (not terminated) and timed_out
+        return success, reward, terminated, truncated
 
     # ------------------------------------------------------------------ #
     # Gym API
@@ -140,6 +160,7 @@ class PandaPushPixels(gym.Env):
         super().reset(seed=seed)              # seeds self.np_random
         self._env.reset(seed=seed)
         self._t = 0
+        self._dwell = 0
 
         frame = self._render_frame()
         self._frames.clear()
@@ -158,10 +179,7 @@ class PandaPushPixels(gym.Env):
 
         obs = self._stacked_obs()
         p = self._privileged()
-        success = self._is_success(p)
-        reward = self._canonical_reward(p)
-        terminated = success                   # end the episode as soon as the cube reaches the target
-        truncated = (not terminated) and self._t >= self._max_steps
+        success, reward, terminated, truncated = self._step_outcome(p)
         info = {"is_success": success, **p}
         return obs, reward, terminated, truncated, info
 

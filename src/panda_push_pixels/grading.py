@@ -105,10 +105,10 @@ def evaluate_policy(policy, n_episodes=EVAL_EPISODES_CI, env=None, verbose=False
     module returned by ``torch.jit.load`` (grading) or ``panda_push_pixels.extract_actor`` (pre-export
     sanity check). This function never imports Stable-Baselines3.
 
-    Success and reward are read from the env's canonical (sparse) signal. The graded metric is
-    ``median_reward``; the rest are diagnostics. The episode terminates the instant the cube
-    reaches the target, so ``success_rate`` is simply the fraction of episodes that ended that
-    way (rather than timing out) — no flicker case to guard against.
+    Success and reward are read from the env's canonical signal. The graded metric is
+    ``success_rate`` — whether the cube reached the target (dwelling there, or still there right
+    at the time limit) — read from the final step's ``info["is_success"]``. ``reward`` fields are
+    diagnostics only (useful while training/shaping, not what the grader gates on).
     """
     own_env = env is None
     if own_env:
