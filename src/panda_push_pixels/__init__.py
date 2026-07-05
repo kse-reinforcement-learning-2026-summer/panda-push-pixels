@@ -26,7 +26,7 @@ from .env import PandaPushPixels
 from .export import export_model, extract_actor, selfcheck
 from .viz import render_episode, save_video
 
-__version__ = "1.0.0"
+__version__ = "7.0.0"
 
 # Register with gymnasium so students can use gym.make("PandaPushPixels-v0")
 gym.register(

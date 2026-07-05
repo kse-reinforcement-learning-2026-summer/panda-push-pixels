@@ -46,10 +46,10 @@ requires four separate skills:
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v1.0.0"
+pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v7.0.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v1.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v7.0.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).
@@ -71,7 +71,7 @@ conda activate rl-project2
 conda install -c conda-forge "pybullet=3.25" "numpy<2" -y
 
 # 3. Install the project (training stack: Stable-Baselines3, etc.)
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v1.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v7.0.0"
 
 # 4. Verify
 python -c "import gymnasium as gym, panda_push_pixels; \
