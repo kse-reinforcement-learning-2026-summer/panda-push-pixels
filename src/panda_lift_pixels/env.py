@@ -37,8 +37,11 @@ from .contract import (
 # Link indices of the two gripper fingers on the Panda body (verified against panda-gym 3.0.7).
 _LEFT_FINGER_LINK = 9
 _RIGHT_FINGER_LINK = 10
-# Per-finger half-width (m) to preset the gripper closed on the ~0.04 m cube for grasp bootstraps.
+# Per-finger half-widths (m): closed onto the ~0.04 m cube (grasp) vs fully open (reach).
 _GRASP_FINGER_HALF = 0.019
+_OPEN_FINGER_HALF = 0.04
+# Default ee-start box (m) for reach augmentation / in-air grasp: over the cube-spawn square, in the air.
+_DEFAULT_EE_BOX = {"x": (-0.13, 0.13), "y": (-0.13, 0.13), "z": (0.08, 0.22)}
 
 # Camera: frontal view framed on the workspace — the gripper sits centred above the cube, so the
 # gripper<->cube alignment is read head-on (clearer for grasping); table fills the frame, floor trimmed.
@@ -171,39 +174,60 @@ class PandaLiftPixels(gym.Env):
             xy = self.np_random.uniform(-r, r, size=2)
             self._set_object_xy(float(xy[0]), float(xy[1]))
 
-        if options.get("start_grasped", False):
-            grasp_height = options.get("grasp_height", None)
-            if grasp_height is None:
-                # In-air grasp at the arm's rest pose (bootstrap "hold"): teleport cube to the ee.
-                ee = np.asarray(self._panda.robot.get_ee_position(), dtype=np.float32)
-                self._sim.set_base_pose(
-                    "object", ee.astype(np.float64), np.array([0.0, 0.0, 0.0, 1.0])
-                )
-            else:
-                # Grasp on/near the table at `grasp_height` (bootstrap the LIFT motion): move the arm
-                # down via IK onto the cube's spawn xy, close the fingers around it, place cube there.
-                self._grasp_object_at_height(float(grasp_height))
+        # Optional start-state overrides (training curriculum; grading passes none => standard start).
+        # Precedence: start_lifted > start_grasped > ee_start.
+        if options.get("start_lifted", False):
+            # Grasp IN THE AIR: sample an ee position in a box, IK the closed gripper there, and
+            # place the cube in the gripper. Bootstraps lift/hold from varied poses/heights.
+            x, y, z = self._sample_ee(options.get("ee_start", _DEFAULT_EE_BOX))
+            ee = self._ik_set_arm(x, y, z, _GRASP_FINGER_HALF)
+            self._sim.set_base_pose("object", ee, np.array([0.0, 0.0, 0.0, 1.0]))
+        elif options.get("start_grasped", False):
+            # Grasp the cube where it sits ON THE TABLE (default h=0.02) or at a given/random height:
+            # IK the arm down onto the cube's xy, close the fingers around it. Bootstraps the LIFT.
+            obj = self._sim.get_base_position("object")
+            height = self._sample_scalar(options.get("grasp_height", 0.02))
+            ee = self._ik_set_arm(float(obj[0]), float(obj[1]), height, _GRASP_FINGER_HALF)
+            self._sim.set_base_pose("object", ee, np.array([0.0, 0.0, 0.0, 1.0]))
+        elif "ee_start" in options:
+            # Non-grasped: place the OPEN gripper at a given/random ee position (reach-stage variety);
+            # the cube stays on the table.
+            x, y, z = self._sample_ee(options["ee_start"])
+            self._ik_set_arm(x, y, z, _OPEN_FINGER_HALF)
 
     def _set_object_xy(self, x, y):
         self._sim.set_base_pose(
             "object", np.array([x, y, 0.02]), np.array([0.0, 0.0, 0.0, 1.0])
         )
 
-    def _grasp_object_at_height(self, height):
-        """Reset into a grasp at (object_xy, height): move the arm down via IK so the gripper closes
-        around the cube at its spawn xy, then place the cube in the gripper. Lets a curriculum
-        bootstrap the LIFT motion (start holding on the table, agent must raise it). The arm is at
-        its neutral (gripper-down) pose here, so we reuse that orientation as the IK target."""
+    def _sample_scalar(self, spec):
+        """A float, or a ``(lo, hi)`` pair sampled uniformly with the env's seeded RNG."""
+        if isinstance(spec, (tuple, list)) and len(spec) == 2:
+            return float(self.np_random.uniform(float(spec[0]), float(spec[1])))
+        return float(spec)
+
+    def _sample_ee(self, spec):
+        """ee target: ``[x, y, z]`` fixed, or ``{"x":(lo,hi), "y":(lo,hi), "z":(lo,hi)}`` sampled."""
+        if isinstance(spec, dict):
+            return (self._sample_scalar(spec.get("x", 0.0)),
+                    self._sample_scalar(spec.get("y", 0.0)),
+                    self._sample_scalar(spec.get("z", 0.15)))
+        return (float(spec[0]), float(spec[1]), float(spec[2]))
+
+    def _ik_set_arm(self, x, y, z, finger_half):
+        """IK the arm so the (gripper-down) ee reaches (x, y, z); set the finger half-widths.
+
+        The arm is at its neutral (gripper-down) pose when this runs, so we reuse that orientation
+        as the IK target. Returns the achieved ee position (IK is approximate, ~2 cm)."""
         robot = self._panda.robot
-        obj = self._sim.get_base_position("object")
-        target = np.array([float(obj[0]), float(obj[1]), float(height)], dtype=np.float64)
         down_orn = np.array(self._pc.getLinkState(self._panda_id, robot.ee_link)[1])
-        q = robot.inverse_kinematics(link=robot.ee_link, position=target, orientation=down_orn)
+        q = robot.inverse_kinematics(
+            link=robot.ee_link, position=np.array([x, y, z], dtype=np.float64), orientation=down_orn
+        )
         angles = np.asarray(q[: len(robot.joint_indices)], dtype=np.float64)
-        angles[-2:] = _GRASP_FINGER_HALF                    # close both fingers onto the cube
+        angles[-2:] = finger_half                           # both finger joints (open or closed)
         robot.set_joint_angles(angles)
-        ee = np.asarray(robot.get_ee_position(), dtype=np.float64)
-        self._sim.set_base_pose("object", ee, np.array([0.0, 0.0, 0.0, 1.0]))
+        return np.asarray(robot.get_ee_position(), dtype=np.float64)
 
     # ------------------------------------------------------------------ #
     # Gym API

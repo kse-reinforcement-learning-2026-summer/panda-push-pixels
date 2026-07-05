@@ -55,22 +55,34 @@ def test_action_repeat_default():
     env.close()
 
 
-def test_curriculum_start_grasped_lifts_object():
+def test_curriculum_start_grasped_on_table():
+    """start_grasped: cube gripped where it spawns ON THE TABLE (h<threshold => must still be lifted)."""
     env = make_eval_env()
-    _, info = env.reset(seed=1, options={"start_grasped": True})
-    assert info["object_height"] > contract.GRASP_LIFT_OFF
+    env.reset(seed=2, options={"start_grasped": True})
+    _, _, _, _, info = env.step(np.zeros(contract.ACTION_DIM, dtype=np.float32))  # 1 step registers contact
+    assert info["n_fingers_touching"] == 2
+    assert info["object_height"] < contract.GRASP_LIFT_OFF      # on the table -> agent must lift it
+    assert info["gripper_to_object"] < 0.03                     # cube held in the gripper
     env.close()
 
 
-def test_curriculum_start_grasped_on_table():
-    """start_grasped + grasp_height places the cube gripped near the table (lift-motion bootstrap)."""
+def test_curriculum_start_lifted_in_air():
+    """start_lifted: cube gripped IN THE AIR (above the lift-off height), from a sampled ee box."""
     env = make_eval_env()
-    env.reset(seed=2, options={"start_grasped": True, "grasp_height": 0.02})
-    # one neutral step registers the contacts; the cube should be gripped low, not yet lifted
+    env.reset(seed=3, options={"start_lifted": True})
     _, _, _, _, info = env.step(np.zeros(contract.ACTION_DIM, dtype=np.float32))
     assert info["n_fingers_touching"] == 2
-    assert info["object_height"] < contract.GRASP_LIFT_OFF      # still on the table -> must be lifted
-    assert info["gripper_to_object"] < 0.03                     # cube is held in the gripper
+    assert info["object_height"] > contract.GRASP_LIFT_OFF      # already lifted -> agent must hold
+    env.close()
+
+
+def test_curriculum_ee_start_reach():
+    """ee_start (no grasp): OPEN gripper placed at a target; cube stays on the table."""
+    env = make_eval_env()
+    _, info = env.reset(seed=4, options={"ee_start": [0.10, -0.08, 0.18]})
+    assert info["fingers_width"] > 0.06                         # gripper open (max ~0.08)
+    assert info["object_height"] < contract.GRASP_LIFT_OFF      # cube on the table, not grasped
+    assert np.linalg.norm(info["ee_position"] - np.array([0.10, -0.08, 0.18])) < 0.06  # IK ~near target
     env.close()
 
 
