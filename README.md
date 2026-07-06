@@ -13,8 +13,10 @@ Push the cube onto the target marker — observed **only from pixels** (4 stacke
 DQN-style), controlled at the **joint** level (7 joint position deltas; the gripper stays
 closed and the policy solves its own IK).
 
-* **Observation** — `Box(0, 1, (12, 112, 112), float32)`: 4 stacked **RGB** frames (112×112),
-  channels-first, already normalized to `[0, 1]`. (Do **not** normalize again in your model.)
+* **Observation** — `Box(0, 255, (12, 112, 112), uint8)`: 4 stacked **RGB** frames (112×112),
+  channels-first, raw `uint8`. Train with the SB3 default `normalize_images=True` (the standard
+  image-RL setup) — SB3 divides by 255 inside the policy, so the CNN sees `[0, 1]`. **uint8 keeps
+  the rollout/replay buffer 4× lighter than float32** (matters for large PPO rollouts and SAC).
   **Why RGB:** the cube is green and the target marker is red — color is what tells them apart;
   in the stock panda-gym scene the target is a translucent *green* box (same hue as the cube),
   so we repaint it red for this project.
@@ -50,10 +52,10 @@ requires four separate skills:
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v9.0.0"
+pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v9.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).
@@ -75,13 +77,13 @@ conda activate rl-project2
 conda install -c conda-forge "pybullet=3.25" "numpy<2" -y
 
 # 3. Install the project (training stack: Stable-Baselines3, etc.)
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v9.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
 
 # 4. Verify
 python -c "import gymnasium as gym, panda_push_pixels; \
 env = gym.make('PandaPushPixels-v0'); obs, info = env.reset(seed=0); \
 print('OK', obs.shape, obs.dtype); env.close()"
-# Expected: OK (12, 112, 112) float32
+# Expected: OK (12, 112, 112) uint8
 ```
 
 Notes:

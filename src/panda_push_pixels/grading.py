@@ -47,6 +47,8 @@ def _seed_offset():
 
 @torch.no_grad()
 def _act(policy, obs):
+    # obs is uint8 in [0, 255]; feed it as float32 (values still 0-255) -- the exported model bakes
+    # in the /255 itself (SB3 normalize_images), so we must NOT normalize here.
     tensor = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)   # (1, 12, 112, 112)
     action = policy(tensor).cpu().numpy().reshape(-1)
     return np.clip(action, ACTION_LOW, ACTION_HIGH)

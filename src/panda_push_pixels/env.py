@@ -61,7 +61,7 @@ _RENDER_DEFAULTS = dict(
 class PandaPushPixels(gym.Env):
     """Pixel-observation Push task with joints control (frozen contract).
 
-    Observation: ``Box(0, 1, (12, 112, 112), float32)`` — 4 stacked RGB frames, channels-first.
+    Observation: ``Box(0, 255, (12, 112, 112), uint8)`` — 4 stacked RGB frames, channels-first.
     Action:      ``Box(-1, 1, (7,), float32)`` — 7 joint position deltas (gripper locked closed).
     """
 
@@ -81,7 +81,7 @@ class PandaPushPixels(gym.Env):
         self._target_id = self._sim._bodies_idx["target"]
         self._pc.changeVisualShape(self._target_id, -1, rgbaColor=_TARGET_COLOR)
 
-        self.observation_space = spaces.Box(0.0, 1.0, OBS_SHAPE, dtype=np.float32)
+        self.observation_space = spaces.Box(0, 255, OBS_SHAPE, dtype=np.uint8)
         self.action_space = spaces.Box(-1.0, 1.0, (ACTION_DIM,), dtype=np.float32)
 
         self._frames = collections.deque(maxlen=N_STACK)
@@ -98,8 +98,10 @@ class PandaPushPixels(gym.Env):
         return np.transpose(frame, (2, 0, 1)).astype(np.uint8)  # (3, 112, 112) uint8
 
     def _stacked_obs(self):
-        stacked = np.concatenate(list(self._frames), axis=0)   # (12, 112, 112) uint8
-        return (stacked.astype(np.float32) / 255.0)
+        # (12, 112, 112) uint8, channels-first. Kept as uint8 (NOT divided by 255) so the PPO/SAC
+        # rollout/replay buffer is 4x lighter; SB3's default normalize_images=True does the /255
+        # inside the policy, so the CNN still sees [0, 1] at train and eval time.
+        return np.concatenate(list(self._frames), axis=0)
 
     # ------------------------------------------------------------------ #
     # Privileged state — for reward shaping by students; NOT the observation

@@ -16,8 +16,10 @@ N_STACK = 4                                   # DQN-style frame stack
 FRAME_HW = 112                                # rendered frame is FRAME_HW x FRAME_HW
 CHANNELS_PER_FRAME = 3                        # RGB (the cube is green, the target is red — color matters)
 OBS_SHAPE = (N_STACK * CHANNELS_PER_FRAME, FRAME_HW, FRAME_HW)  # (12, 112, 112), channels-first
-OBS_LOW = 0.0
-OBS_HIGH = 1.0                                # observations are float32 in [0, 1] (already /255)
+OBS_LOW = 0
+OBS_HIGH = 255                               # observations are uint8 in [0, 255] (raw RGB, channels-first);
+                                             # SB3's default normalize_images=True does the /255 inside the policy.
+                                             # uint8 keeps the rollout/replay buffer 4x lighter than float32.
 
 # ---------------------------------------------------------------------------
 # Action contract — what the model must output

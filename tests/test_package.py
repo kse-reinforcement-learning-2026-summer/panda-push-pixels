@@ -22,8 +22,8 @@ def test_env_observation_contract():
     env = make_eval_env()
     obs, info = env.reset(seed=0)
     assert obs.shape == contract.OBS_SHAPE
-    assert obs.dtype == np.float32
-    assert obs.min() >= 0.0 and obs.max() <= 1.0
+    assert obs.dtype == np.uint8
+    assert obs.min() >= 0 and obs.max() <= 255
     assert tuple(env.action_space.shape) == (contract.ACTION_DIM,)
     assert {
         "object_position", "target_position", "object_size", "ee_position",
@@ -130,7 +130,7 @@ def tiny_model():
     env = gym.make("PandaPushPixels-v0", max_episode_steps=50)
     model = SAC(
         "CnnPolicy", env, buffer_size=400, learning_starts=40, train_freq=4, batch_size=32,
-        policy_kwargs=dict(normalize_images=False), device="cpu", verbose=0,
+        device="cpu", verbose=0,   # default normalize_images=True: SB3 /255 on the uint8 obs
     )
     model.learn(total_timesteps=120)
     export_model(model, MODEL_PATH)
@@ -155,15 +155,15 @@ def test_extract_actor_all_algorithms(algo_name):
 
     Algo = getattr(sb3, algo_name)
     env = gym.make("PandaPushPixels-v0")
-    kwargs = dict(policy_kwargs=dict(normalize_images=False), device="cpu", verbose=0)
+    kwargs = dict(device="cpu", verbose=0)   # default normalize_images=True on the uint8 obs
     if algo_name in ("DDPG", "TD3", "SAC"):
         kwargs["buffer_size"] = 200  # tiny: avoid allocating a huge image replay buffer
     model = Algo("CnnPolicy", env, **kwargs)
 
     actor = extract_actor(model).eval()
-    obs_batch = np.random.rand(4, *contract.OBS_SHAPE).astype(np.float32)
+    obs_batch = np.random.randint(0, 256, (4, *contract.OBS_SHAPE), dtype=np.uint8)
     with torch.no_grad():
-        actions_actor = actor(torch.as_tensor(obs_batch)).numpy()
+        actions_actor = actor(torch.as_tensor(obs_batch, dtype=torch.float32)).numpy()
     actions_sb3 = np.array([model.predict(o, deterministic=True)[0] for o in obs_batch])
 
     assert np.abs(actions_actor - actions_sb3).max() < 1e-4
