@@ -49,10 +49,20 @@ SUCCESS_BONUS = 50.0         # ADDED on top of STEP_PENALTY on the step success 
 # success (dwelling from step 1) returns STEP_PENALTY * DWELL_STEPS + SUCCESS_BONUS.
 
 # ---------------------------------------------------------------------------
-# Grading thresholds
+# Grading thresholds — tiered rubric (5 / 10 / 15 points)
 # ---------------------------------------------------------------------------
-PARAM_LIMIT = 10_000_000     # max number of parameters in the submitted model.pt
-SUCCESS_RATE_THRESHOLD = 0.5 # PLACEHOLDER fraction of eval episodes that must succeed — set after calibration
+PARAM_LIMIT = 4_000_000      # max number of parameters in the submitted model.pt (5-pt gate)
+
+# Tier metrics, both measured over the same deterministic evaluation episodes:
+TOUCH_DISPLACEMENT = 0.01    # the cube counts as "moved" if its centre leaves the spawn by > 1 cm
+TOUCH_RATE_THRESHOLD = 0.80  # 10-pt tier: fraction of episodes in which the agent MOVED the cube
+SUCCESS_RATE_THRESHOLD = 0.5 # 15-pt tier: fraction of episodes that SUCCEED (push onto target + dwell)
+
+# The SB3 algorithms taught in the course — the submitted notebook must import one of these and call
+# .learn() (5-pt gate). The naive PPO baseline shipped in the template's prewritten sections (1-2)
+# does NOT count: the check only scans code from the first student section (## 3 onward).
+ALLOWED_SB3_ALGOS = ("A2C", "PPO", "DDPG", "TD3", "SAC")
+
 LATENCY_BUDGET_S = 0.05      # max seconds per forward pass on CPU (keeps eval within time budget)
 
 EVAL_EPISODES_CI = 30        # episodes run in student CI / local testing

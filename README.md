@@ -26,9 +26,23 @@ closed and the policy solves its own IK).
   (5 cm) of the target for `DWELL_STEPS` (5) *consecutive* steps — a single-step graze from a
   fast-moving cube doesn't count, so "fling the cube through the target zone" isn't a shortcut.
   The one exception: if the cube is within the threshold right when the 50-step time limit hits,
-  that still counts (it would have dwelled long enough given a few more steps). The **graded
-  metric is `success_rate`** (fraction of eval episodes that reached the target); reward is a
-  training signal, not what the grader gates on.
+  that still counts (it would have dwelled long enough given a few more steps). Reward is a
+  training signal — grading is tiered on two behavioral metrics instead (below).
+
+### Grading — tiered rubric (5 / 10 / 15 points, cumulative)
+
+Both tier metrics come from the same deterministic evaluation episodes
+(`grading.evaluate`/`evaluate_policy`), and both live in `contract.py`:
+
+* **5 pts** — the submitted notebook imports one of `ALLOWED_SB3_ALGOS` (`A2C`, `PPO`, `DDPG`,
+  `TD3`, `SAC`) and calls `.learn(...)` in the student's own sections (checked by
+  `grading.notebook_trains_sb3`, pure JSON parsing — the notebook is never executed), **and**
+  `model.pt` loads, satisfies the I/O contract, and has `<= PARAM_LIMIT` parameters.
+* **10 pts** — `touch_rate >= TOUCH_RATE_THRESHOLD` (`0.80`): the cube's centre moves more than
+  `TOUCH_DISPLACEMENT` (`0.01` m) from its spawn position at some point in the episode — the agent
+  found and nudged the cube, direction irrelevant.
+* **15 pts** — `success_rate >= SUCCESS_RATE_THRESHOLD` (`0.50`): the push actually succeeds
+  (reaches the target and dwells, per the canonical reward above).
 
 ### Why this is harder than it looks
 
@@ -52,10 +66,10 @@ requires four separate skills:
 ```bash
 # Grading / evaluation only (CI, local tests) — no Stable-Baselines3:
 pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu
-pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
+pip install "panda-push-pixels @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v11.0.0"
 
 # Training (Colab/Kaggle) — keep the platform's GPU torch, add the SB3 stack:
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v11.0.0"
 ```
 
 Requires **Python 3.11+** (panda-gym pins `numpy<2`; pybullet builds from source on 3.13+).
@@ -77,7 +91,7 @@ conda activate rl-project2
 conda install -c conda-forge "pybullet=3.25" "numpy<2" -y
 
 # 3. Install the project (training stack: Stable-Baselines3, etc.)
-pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v10.0.0"
+pip install "panda-push-pixels[train] @ git+https://github.com/kse-reinforcement-learning-2026-summer/panda-push-pixels.git@v11.0.0"
 
 # 4. Verify
 python -c "import gymnasium as gym, panda_push_pixels; \
@@ -107,7 +121,7 @@ from panda_push_pixels import (
     extract_actor,       # SB3 model  ->  actor nn.Module (A2C/PPO/DDPG/TD3/SAC)
     selfcheck,           # assert the exported model.pt == sb3_model.predict(deterministic=True)
     grading,             # grading.evaluate / evaluate_policy / check_contract / count_parameters / measure_latency
-    contract,            # all contract constants (shapes, limits, threshold)
+    contract,            # all contract constants (shapes, limits, tiered thresholds)
 )
 
 # Use either gym.make or make_eval_env
@@ -127,17 +141,20 @@ notebook.
 
 ```
 src/panda_push_pixels/
-├── contract.py    constants: OBS_SHAPE, ACTION_DIM, DISTANCE_THRESHOLD, PARAM_LIMIT, REWARD_THRESHOLD…
+├── contract.py    constants: OBS_SHAPE, ACTION_DIM, DISTANCE_THRESHOLD, PARAM_LIMIT, tiered thresholds…
 ├── env.py         PandaPushPixels — the frozen gym.Env (observation + action + task)
 ├── viz.py         render_episode, save_video — rollout + visualization helpers (not part of grading)
 ├── export.py      export_model, extract_actor, selfcheck (SB3 → TorchScript)
-└── grading.py     load_policy, check_contract, count_parameters, measure_latency, evaluate, evaluate_policy
+└── grading.py     load_policy, check_contract, count_parameters, measure_latency, evaluate,
+                   evaluate_policy (returns touch_rate + success_rate), notebook_trains_sb3
 ```
 
 ## For the instructor
 
-* **Calibrate before release.** `SUCCESS_RATE_THRESHOLD` in `contract.py` is a placeholder. Train
-  a reference solution, then set the threshold to its measured success rate minus a margin.
+* **Tiered thresholds are fixed by rubric, not calibration.** `TOUCH_RATE_THRESHOLD` (`0.80`) and
+  `SUCCESS_RATE_THRESHOLD` (`0.50`) in `contract.py` are the course's stated 10-pt/15-pt bars, not
+  placeholders to be loosened to match a reference run. A reference solution trained end-to-end
+  reached ~100% touch / ~13% push success — 15 pts is intended to be very hard to reach.
 * **Hidden eval seeds.** `grading.evaluate` reads `EVAL_SEED_OFFSET` from the environment
   (default `0`). Set it as a GitHub Secret in the final grading workflow so students cannot
   overfit to the public seeds.
